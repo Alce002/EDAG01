@@ -6,10 +6,6 @@
 
 
 
-void print_all(int m, int n, double **a, double *b, double *c, double y);
-
-
-
 int init(simplex_t *s, int m, int n, double **a, double *b, double *c, double *x, double y, int *var) {
     int i, k;
     (*s) = (simplex_t){m, n, var, a, b, x, c, y};
@@ -242,80 +238,3 @@ double xsimplex(int m, int n, double **a, double *b, double *c, double *x, doubl
 double simplex(int m, int n, double **a, double *b, double *c, double *x, double y) {
     return xsimplex(m, n, a, b, c, x, y, NULL, 0);
 }
-
-double** make_matrix(int m, int n){
-    double **a;
-    int i;
-    a = calloc(m, sizeof(*a));
-    for (i = 0; i < m; i++)
-        a[i] = calloc(n, sizeof(**a));
-    return a;
-}
-
-void print_all(int m, int n, double **a, double *b, double *c, double y) {
-	printf("------------------------------\n");
-	/* Print statements*/
-    // m & n
-    printf("m = %d, n = %d\n", m, n);
-
-    // c
-    printf("max z = ");
-    for(int i=0; i < n-1; i++) {
-        printf("%10.3lf x%d+", c[i], i);
-    }
-    printf("%10.3lf x%d\n", c[n-1], n-1);
-
-    // matrix
-    for(int y=0; y < m; y++) {
-        for(int x=0; x < n-1; x++) {
-            printf("%10.3lf x%d+", a[y][x], x);
-        }
-        printf("%10.3lf x%d \u2264 %10.3lf\n", a[y][n - 1], n-1, b[y]);
-    }
-
-	printf("y = %lf\n", y);
-
-}
-
-int main(int argc, char** argv) {
-    int n, m;
-    double *c, *b;
-    double **a;
-
-    scanf("%d %d", &m, &n);
-
-    c = calloc(n, sizeof(*c));
-    for(int i=0; i < n; i++) {
-        scanf("%lf", &c[i]);
-    }
-
-    a = make_matrix(m, n + 1);
-    for(int i = 0; i <m; i++) {
-        for(int j = 0; j < n; j++) {
-            scanf("%lf",&a[i][j]);
-        }
-    }
-
-    b = calloc(m, sizeof(*b));
-    for(int i=0; i < m; i++) {
-        scanf("%lf", &b[i]);
-    }
-
-	print_all(m, n, a, b, c, 0);
-
-    double *x = calloc(n + 1, sizeof(*x));
-
-    double y = simplex(m, n, a, b, c, x, 0);
-
-    print_all(m, n, a, b, c, y);
-    printf("------------------------------\n");
-    
-    free(x);
-    free(c);
-    free(b);
-    for(int i = 0; i < n; i++) {
-        free(a[i]);
-    }
-    free(a);
-    return 0;
-} 
