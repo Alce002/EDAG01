@@ -77,7 +77,7 @@ int initial(simplex_t *s, int m, int n, double **a, double *b, double *c, double
 
     for(i = 0; i < m + n; i++) {
         if(s->var[i] == m + n - 1) {
-            if(abs(s->x[i]) > EPSILON) {
+            if(fabs(s->x[i]) > EPSILON) {
                 free(s->x);
                 free(s->c);
                 return 0;
@@ -89,8 +89,7 @@ int initial(simplex_t *s, int m, int n, double **a, double *b, double *c, double
 
     if(i >= n) {
         for(j = k = 0; k < n; k++) {
-            printf("i: %d, n: %d\n", i, n);
-            if(abs(s->a[i - n][k]) > abs(s->a[i - n][j])) {
+            if(fabs(s->a[i - n][k]) > fabs(s->a[i - n][j])) {
                 j = k;
             }
         }
@@ -198,7 +197,7 @@ void pivot(simplex_t *s, int row, int col) {
     b[row] = b[row] / a[row][col];
     a[row][col] = 1 / a[row][col];
 
-	print_all(s->m, s->n, s->a, s->b, s->c, s->y);
+	//print_all(s->m, s->n, s->a, s->b, s->c, s->y);
 }
 
 double xsimplex(int m, int n, double **a, double *b, double *c, double *x, double y, int *var, int h) {
@@ -250,6 +249,8 @@ double xsimplex(int m, int n, double **a, double *b, double *c, double *x, doubl
             x[i] = s.b[i - n];
         }
     }
+
+	print_all(s.m, s.n, s.a, s.b, s.c, s.y);
 
     return s.y;
 }
@@ -321,6 +322,7 @@ int main(int argc, char** argv) {
     double *x = calloc(n + 1, sizeof(*x));
 
     double y = intopt(m, n, matrix, b, c, x);
+//	double y = simplex(m, n, matrix, b, c, x, 0);
 
 	print_all(m, n, matrix, b, c, y);
 

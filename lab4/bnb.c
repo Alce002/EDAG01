@@ -5,6 +5,19 @@
 #include "simplex.h"
 #include "bnb.h"
 
+void free_node(node_t *p) {
+	for(int i = 0; i < p->m + 1; i++) {
+		free(p->a[i]);
+	}
+	free(p->a);
+	free(p->b);
+	free(p->c);
+	free(p->x);
+	free(p->min);
+	free(p->max);
+	free(p);
+}
+
 node_t* inital_node(int m, int n, double **a, double *b, double *c) {
 	node_t *p = calloc(1, sizeof(node_t));
 	p->a = make_matrix(m + 1, n + 1);
@@ -41,12 +54,13 @@ node_t* extend(node_t *p, int m, int n, double **a, double *b, double *c, int k,
 	q->k = k;
 	q->ak = ak;
 	q->bk = bk;
-	if(ak > 0 && isfinite(p->max[k]))
+	if(ak > 0 && p->max[k] < INFINITY) {
 		q->m = p->m;
-	else if(ak < 0 && p->min[k] > 0)
+	} else if(ak < 0 && p->min[k] > 0) {
 		q->m = p->m;
-	else
+	} else {
 		q->m = p->m + 1;
+	}
 
 	q->n = p->n;
 	q->h = -1;
@@ -64,28 +78,35 @@ node_t* extend(node_t *p, int m, int n, double **a, double *b, double *c, int k,
 	}
 
 	for(j = 0; j < m; j++) {
-		q->b[j] = b[j];
-		for(i = 0; i < n + 1; i++) {
+		for(i = 0; i < n; i++) {
 			q->a[j][i] = a[j][i];
-			if(j == 0)
-				q->c[i] = c[i];
 		}
 	}
 
-	if(ak > 0)
-		if(isinf(q->max[k]) || bk < q->max[k])
-				q->max[k] = bk;
-	else if(isinf(q->min[k]) || -bk > q->min[k])
+	for(j = 0; j < m; j++) {
+		q->b[j] = b[j];
+	}
+
+	for(j = 0; j < n; j++) {
+		q->c[j] = c[j];
+	}
+
+	if(ak > 0) {
+		if(q->max[k] == INFINITY || bk < q->max[k]) {
+			q->max[k] = bk;
+		}
+	} else if(q->min[k] == -INFINITY || -bk > q->min[k]) {
 		q->min[k] = -bk;
+	}
 	
-	for(i = m, j= 0; j < n; j++) {
-		if(isfinite(q->min[j])) {
+	for(i = m, j = 0; j < n; j++) {
+		if(q->min[j] > -INFINITY) {
 			q->a[i][j] = -1;
 			q->b[i] = -q->min[j];
 			i++;
 		}
 
-		if(isfinite(q->max[j])) {
+		if(q->max[j] < INFINITY) {
 			q->a[i][j] = 1;
 			q->b[i] = q->max[j];
 			i++;
@@ -97,8 +118,8 @@ node_t* extend(node_t *p, int m, int n, double **a, double *b, double *c, int k,
 
 int is_integer(double *xp) {
 	double x = *xp;
-	double r = round(x);
-	if(abs(r - x) < EPSILON) {
+	double r = lround(x);
+	if(fabs(r - x) < EPSILON) {
 		*xp = r;
 		return 1;
 	} else {
@@ -123,20 +144,22 @@ void bound(node_t *p, node_t **h, double *zp, double *x) {
 			x[i] = p->x[i];
 		}
 		// Cull h
-		while((*h)->z < p->z) {
+		while(*h != NULL && (*h)->z < p->z) {
 			node_t *old = *h;
 			*h = (*h)->next;
-			// free old
+			free_node(old);
 		}
-
-		node_t *current = *h;
-		while(current->next != NULL) {
-			if(current->next->z < p->z) {
-				node_t *old = current->next;
-				current->next = current->next->next;
-				// free old
-			} else {
-				current = current->next;
+		
+		if(*h != NULL) {
+			node_t *current = *h;
+			while(current->next != NULL) {
+				if(current->next->z < p->z) {
+					node_t *old = current->next;
+					current->next = current->next->next;
+					free_node(old);
+				} else {
+					current = current->next;
+				}
 			}
 		}
 	}
@@ -149,18 +172,24 @@ int branch(node_t *q, double z) {
 
 	for(int h = 0; h < q->n; h++) {
 		if(!is_integer(&q->x[h])) {
-			if(isinf(q->min[h])) min = 0;
+			if(q->min[h] == -INFINITY) min = 0;
 			else min = q->min[h];
+
 			max = q->max[h];
+
 			if(floor(q->x[h]) < min || ceil(q->x[h]) > max) continue;
+			
 			q->h = h;
 			q->xh = q->x[h];
+			/*			
 			for(int i = 0; i < q->m; i++)
 				free(q->a[i]);
+			
 			free(q->a);
 			free(q->b);
 			free(q->c);
 			free(q->x);
+			*/
 			return 1;
 		}
 	}
@@ -173,21 +202,25 @@ void succ(node_t *p, node_t **h, int m, int n, double **a, double *b, double *c,
 	q->z = simplex(q->m, q->n, q->a, q->b, q->c, q->x, 0);
 	if(isfinite(q->z)) {
 			printf("Checking %lf\n", q->z);
+			for(int i = 0; i < n; i++)
+				printf("x%d = %lf\n", i, q->x[i]);
 			if(integer(q)) {
 				bound(q, h, zp, x);
 			} else if(branch(q, *zp)) {
+				printf("h: %d, xh: %lf\n", q->h, q->xh);
 				q->next = *h;
 				*h = q;
 				return;
 			}
 	}
-	//free(q);
+	free_node(q);
 }
 
 double intopt(int m, int n, double **a, double *b, double *c, double *x) {
 	node_t *p = inital_node(m, n, a, b, c);
 	node_t *h = p;
 	double z = -INFINITY;
+	printf("Begin intopt\n");
 	p->z = simplex(p->m, p->n, p->a, p->b, p->c, p->x, 0);
 	if(integer(p) || !isfinite(p->z)) {
 		z = p->z;
@@ -196,7 +229,7 @@ double intopt(int m, int n, double **a, double *b, double *c, double *x) {
 				x[i] = p->x[i];
 			}
 		}
-		free(p);
+		free_node(p);
 		return z;
 	}
 	branch(p, z);
@@ -205,7 +238,7 @@ double intopt(int m, int n, double **a, double *b, double *c, double *x) {
 		h = p->next;
 		succ(p, &h, m, n, a, b, c, p->h, 1, floor(p->xh), &z, x);
 		succ(p, &h, m, n, a, b, c, p->h, -1, -ceil(p->xh), &z, x);
-		//free(p);
+		free_node(p);
 	}
 
 	if(z == -INFINITY) return NAN;
