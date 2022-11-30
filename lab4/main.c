@@ -123,7 +123,7 @@ int initial(simplex_t *s, int m, int n, double **a, double *b, double *c, double
             }
         }
 
-        for(j = 0; j < n; j++) {
+        for(j = 0; j < m; j++) {
             if(s->var[n + j] == k) {
                 break;
             }
@@ -197,7 +197,7 @@ void pivot(simplex_t *s, int row, int col) {
     b[row] = b[row] / a[row][col];
     a[row][col] = 1 / a[row][col];
 
-	//print_all(s->m, s->n, s->a, s->b, s->c, s->y);
+	print_all(s->m, s->n, s->a, s->b, s->c, s->y);
 }
 
 double xsimplex(int m, int n, double **a, double *b, double *c, double *x, double y, int *var, int h) {
@@ -250,12 +250,13 @@ double xsimplex(int m, int n, double **a, double *b, double *c, double *x, doubl
         }
     }
 
-	print_all(s.m, s.n, s.a, s.b, s.c, s.y);
+	//print_all(s.m, s.n, s.a, s.b, s.c, s.y);
 
     return s.y;
 }
 
 double simplex(int m, int n, double **a, double *b, double *c, double *x, double y) {
+    //print_all(m, n, a, b, c, y);
     return xsimplex(m, n, a, b, c, x, y, NULL, 0);
 }
 
@@ -288,7 +289,6 @@ void print_all(int m, int n, double **a, double *b, double *c, double y) {
         }
         printf("%10.3lf x%d \u2264 %10.3lf\n", a[y][n - 1], n-1, b[y]);
     }
-
 	printf("y = %lf\n", y);
 	printf("------------------------------\n");
 }
@@ -322,7 +322,7 @@ int main(int argc, char** argv) {
     double *x = calloc(n + 1, sizeof(*x));
 
     double y = intopt(m, n, matrix, b, c, x);
-//	double y = simplex(m, n, matrix, b, c, x, 0);
+	//double y = simplex(m, n, matrix, b, c, x, 0);
 
 	print_all(m, n, matrix, b, c, y);
 

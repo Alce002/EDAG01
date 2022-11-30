@@ -30,17 +30,23 @@ node_t* inital_node(int m, int n, double **a, double *b, double *c) {
 	p->n = n;
 	p->next = NULL;
 	// copy a, b, c
-	int x, y;
-	for(y = 0; y < m; y++) {
-		p->b[y] = b[y];
-		for(x = 0; x < n; x++) {
-			p->a[y][x] = a[y][x];
-			if(y == 0)
-				p->c[x] = c[x];
+	int i, j;
+	
+	for(j = 0; j < m; j++) {
+		for(i = 0; i < n; i++) {
+			p->a[j][i] = a[j][i];
 		}
 	}
 
-	for(int i = 0; i < n; i++) {
+	for(j = 0; j < m; j++) {
+		p->b[j] = b[j];
+	}
+
+	for(j = 0; j < n; j++) {
+		p->c[j] = c[j];
+	}
+
+	for(i = 0; i < n; i++) {
 		p->min[i] = -INFINITY;
 		p->max[i] = INFINITY;
 	}
@@ -54,9 +60,9 @@ node_t* extend(node_t *p, int m, int n, double **a, double *b, double *c, int k,
 	q->k = k;
 	q->ak = ak;
 	q->bk = bk;
-	if(ak > 0 && p->max[k] < INFINITY) {
+	if((ak > 0) && (p->max[k] < INFINITY)) {
 		q->m = p->m;
-	} else if(ak < 0 && p->min[k] > 0) {
+	} else if((ak < 0) && (p->min[k] > 0)) {
 		q->m = p->m;
 	} else {
 		q->m = p->m + 1;
@@ -92,10 +98,10 @@ node_t* extend(node_t *p, int m, int n, double **a, double *b, double *c, int k,
 	}
 
 	if(ak > 0) {
-		if(q->max[k] == INFINITY || bk < q->max[k]) {
+		if((q->max[k] == INFINITY) || (bk < q->max[k])) {
 			q->max[k] = bk;
 		}
-	} else if(q->min[k] == -INFINITY || -bk > q->min[k]) {
+	} else if((q->min[k] == -INFINITY) || (-bk > q->min[k])) {
 		q->min[k] = -bk;
 	}
 	
@@ -177,19 +183,10 @@ int branch(node_t *q, double z) {
 
 			max = q->max[h];
 
-			if(floor(q->x[h]) < min || ceil(q->x[h]) > max) continue;
+			if((floor(q->x[h]) < min) || (ceil(q->x[h]) > max)) continue;
 			
 			q->h = h;
 			q->xh = q->x[h];
-			/*			
-			for(int i = 0; i < q->m; i++)
-				free(q->a[i]);
-			
-			free(q->a);
-			free(q->b);
-			free(q->c);
-			free(q->x);
-			*/
 			return 1;
 		}
 	}
