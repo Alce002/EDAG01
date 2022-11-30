@@ -2,16 +2,8 @@
 #include <stdlib.h>
 #include <math.h>
 
+#include "simplex.h"
 #include "bnb.h"
-
-double** make_matrix(int m, int n){
-    double **a;
-    int i;
-    a = calloc(m, sizeof(*a));
-    for (i = 0; i < m; i++)
-        a[i] = calloc(n, sizeof(**a));
-    return a;
-}
 
 node_t* inital_node(int m, int n, double **a, double *b, double *c) {
 	node_t *p = calloc(1, sizeof(node_t));
@@ -23,10 +15,12 @@ node_t* inital_node(int m, int n, double **a, double *b, double *c) {
 	p->max = calloc(n, sizeof(double));
 	p->m = m;
 	p->n = n;
+	p->next = NULL;
 	// copy a, b, c
-	for(int y = 0; y <= m; y++) 
+	int x, y;
+	for(y = 0; y < m; y++) {
 		p->b[y] = b[y];
-		for(int x = 0; x <= n; x++) {
+		for(x = 0; x < n; x++) {
 			p->a[y][x] = a[y][x];
 			if(y == 0)
 				p->c[x] = c[x];
@@ -56,12 +50,13 @@ node_t* extend(node_t *p, int m, int n, double **a, double *b, double *c, int k,
 
 	q->n = p->n;
 	q->h = -1;
-	q->a = make_matrix(q->m + 1,m q->n + 1);
+	q->a = make_matrix(q->m + 1, q->n + 1);
 	q->b = calloc(q->m + 1, sizeof(double));
 	q->c = calloc(q->n + 1, sizeof(double));
 	q->x = calloc(q->n + 1, sizeof(double));
 	q->min = calloc(n, sizeof(double));
 	q->max = calloc(n, sizeof(double));
+	q->next = NULL;
 
 	for(i = 0; i < n; i++) {
 		q->min[i] = p->min[i];
@@ -73,7 +68,7 @@ node_t* extend(node_t *p, int m, int n, double **a, double *b, double *c, int k,
 		for(i = 0; i < n + 1; i++) {
 			q->a[j][i] = a[j][i];
 			if(j == 0)
-				a->c[i] = c[i];
+				q->c[i] = c[i];
 		}
 	}
 
@@ -121,13 +116,31 @@ int integer(node_t *p) {
 	return 1;
 }
 
-void bound(node_t *p, int h, double *zp, double *x) {
+void bound(node_t *p, node_t **h, double *zp, double *x) {
 	if(p->z > *zp) {
 		*zp = p->z;
-		for(i = 0; i < p->n; i++) {
+		for(int i = 0; i < p->n; i++) {
 			x[i] = p->x[i];
 		}
+		// Cull h
+		while((*h)->z < p->z) {
+			node_t *old = *h;
+			*h = (*h)->next;
+			// free old
+		}
+
+		node_t *current = *h;
+		while(current->next != NULL) {
+			if(current->next->z < p->z) {
+				node_t *old = current->next;
+				current->next = current->next->next;
+				// free old
+			} else {
+				current = current->next;
+			}
+		}
 	}
+	printf("Best z: %lf\n", *zp);
 }
 
 int branch(node_t *q, double z) {
@@ -139,7 +152,7 @@ int branch(node_t *q, double z) {
 			if(isinf(q->min[h])) min = 0;
 			else min = q->min[h];
 			max = q->max[h];
-			if(floor(q->x[h]) < min || ceil(q->[h]) > max) continue;
+			if(floor(q->x[h]) < min || ceil(q->x[h]) > max) continue;
 			q->h = h;
 			q->xh = q->x[h];
 			for(int i = 0; i < q->m; i++)
@@ -154,24 +167,26 @@ int branch(node_t *q, double z) {
 	return 0;
 }
 
-void succ(node_t *p, h, int m, int n, double **a, double *b, double *c, int k, double ak, double bk, double *sp, double *x) {
-	node_t *q extend(p, m, n, a, b, c, k, ak, bk);
+void succ(node_t *p, node_t **h, int m, int n, double **a, double *b, double *c, int k, double ak, double bk, double *zp, double *x) {
+	node_t *q = extend(p, m, n, a, b, c, k, ak, bk);
 	if(q == NULL) return;
 	q->z = simplex(q->m, q->n, q->a, q->b, q->c, q->x, 0);
 	if(isfinite(q->z)) {
+			printf("Checking %lf\n", q->z);
 			if(integer(q)) {
 				bound(q, h, zp, x);
 			} else if(branch(q, *zp)) {
-				// append q to h
+				q->next = *h;
+				*h = q;
 				return;
 			}
 	}
-	free(q);
+	//free(q);
 }
 
 double intopt(int m, int n, double **a, double *b, double *c, double *x) {
 	node_t *p = inital_node(m, n, a, b, c);
-	// list h
+	node_t *h = p;
 	double z = -INFINITY;
 	p->z = simplex(p->m, p->n, p->a, p->b, p->c, p->x, 0);
 	if(integer(p) || !isfinite(p->z)) {
@@ -185,10 +200,12 @@ double intopt(int m, int n, double **a, double *b, double *c, double *x) {
 		return z;
 	}
 	branch(p, z);
-	while(/*len(h) > 0*/) {
-		succ(p, h, m, n, a, b, c, p->h, 1, floor(p->xh), &z, x);
-		succ(p, h, m, n, a, b, c, p->h, -1, -ceil(p->xh), &z, x);
-		free(p);
+	while(h != NULL) {
+		p = h;
+		h = p->next;
+		succ(p, &h, m, n, a, b, c, p->h, 1, floor(p->xh), &z, x);
+		succ(p, &h, m, n, a, b, c, p->h, -1, -ceil(p->xh), &z, x);
+		//free(p);
 	}
 
 	if(z == -INFINITY) return NAN;

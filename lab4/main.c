@@ -2,9 +2,8 @@
 #include <stdlib.h>
 #include <math.h>
 
+#include "bnb.h"
 #include "simplex.h"
-
-#define EPSILON 1e-6
 
 void print_all(int m, int n, double **a, double *b, double *c, double y);
 
@@ -321,7 +320,7 @@ int main(int argc, char** argv) {
 
     double *x = calloc(n + 1, sizeof(*x));
 
-    double y = simplex(m, n, matrix, b, c, x, 0);
+    double y = intopt(m, n, matrix, b, c, x);
 
 	print_all(m, n, matrix, b, c, y);
 

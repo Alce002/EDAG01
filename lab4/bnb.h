@@ -1,7 +1,7 @@
 #ifndef BRANCH_AND_BOUND_H
 #define BRANCH_AND_BOUND_H
 
-typedef struct {
+typedef struct node_t {
 	int m;
 	int n;
 	int k;
@@ -16,6 +16,9 @@ typedef struct {
 	double *x;
 	double *c;
 	double z;
+	struct node_t *next;
 } node_t;
+
+double intopt(int m, int n, double **a, double *b, double *c, double *x);
 
 #endif // BRANCH_AND_BOUND_H

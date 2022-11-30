@@ -1,6 +1,8 @@
 #ifndef SIMPLEX_H
 #define SIMPLEX_H
 
+#define EPSILON 1e-6
+
 typedef struct simplex_t {
     int m; /* Constraints. */
     int n; /* Decision variables. */
@@ -11,5 +13,8 @@ typedef struct simplex_t {
     double *c; // [n]; /* c . */
     double y; /* y. */
 } simplex_t;
+
+double simplex(int m, int n, double **a, double *b, double *c, double *x, double y); 
+double** make_matrix(int m, int n);
 
 #endif // SIMPLEX_H
